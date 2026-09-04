@@ -1,8 +1,7 @@
 import puppeteer from 'puppeteer';
-import path from 'path';
-import fs from 'fs';
-import QRCode from 'qrcode';
 import { formatDate } from './certificate';
+import fs from 'fs';
+import path from 'path';
 
 interface SignatoryData {
   name: string;
@@ -23,442 +22,304 @@ interface CertificateData {
   signatories: SignatoryData[];
 }
 
-function buildCertificateHtml(data: CertificateData, qrDataUrl: string): string {
-  const signatoriesCount = data.signatories.length;
+function victorianCornerSvg(): string {
+  return `<svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%;">
+    <path d="M8 8 H45 V12 H12 V45 H8 Z" fill="#1c2841" />
+    <path d="M2 2 H30 V5 H5 V30 H2 Z" fill="#1c2841" />
+    <path d="M 30 5 C 42 -2, 55 2, 68 8 C 58 12, 45 10, 30 5 Z" fill="#1c2841" />
+    <path d="M 60 7 C 75 0, 90 4, 102 10 C 90 14, 75 12, 60 7 Z" fill="#1c2841" />
+    <path d="M 95 9 C 105 5, 112 7, 118 10 C 112 13, 104 12, 95 9 Z" fill="#1c2841" />
+    <path d="M 5 30 C -2 42, 2 55, 8 68 C 12 58, 10 45, 5 30 Z" fill="#1c2841" />
+    <path d="M 7 60 C 0 75, 4 90, 10 102 C 14 90, 12 75, 7 60 Z" fill="#1c2841" />
+    <path d="M 9 95 C 5 105, 7 112, 10 118 C 13 112, 12 104, 9 95 Z" fill="#1c2841" />
+    <path d="M 15 15 C 32 32, 45 22, 38 14 C 32 8, 18 18, 15 15 Z" fill="#1c2841" />
+    <path d="M 15 15 C 32 32, 22 45, 14 38 C 8 32, 18 18, 15 15 Z" fill="#1c2841" />
+    <path d="M 20 20 C 45 45, 62 28, 50 16 C 38 4, 24 24, 20 20 Z" stroke="#1c2841" stroke-width="2.2" fill="none" />
+    <path d="M 20 20 C 45 45, 28 62, 16 50 C 4 38, 24 24, 20 20 Z" stroke="#1c2841" stroke-width="2.2" fill="none" />
+    <circle cx="32" cy="32" r="4.5" fill="#1c2841" />
+    <circle cx="46" cy="18" r="2.8" fill="#1c2841" />
+    <circle cx="18" cy="46" r="2.8" fill="#1c2841" />
+  </svg>`;
+}
 
-  const signatoriesHtml = data.signatories.map((s) => `
-    <div class="signature-block">
-      <img src="${s.signatureUrl}" class="signature-img" onerror="this.style.display='none'" />
-      <div class="signature-line"></div>
-      <div class="signature-name">${s.name}</div>
-      <div class="signature-title">${s.title}</div>
-    </div>
-  `).join('');
+function centerDiamondSvg(): string {
+  return `<svg viewBox="0 0 40 20" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:70px;height:18px;">
+    <path d="M 0 10 L 15 10" stroke="#1c2841" stroke-width="1.5" />
+    <path d="M 25 10 L 40 10" stroke="#1c2841" stroke-width="1.5" />
+    <polygon points="20,2 25,10 20,18 15,10" fill="#1c2841" />
+  </svg>`;
+}
 
-  const displayType = data.certificateType.toUpperCase().replace('CERTIFICATE OF ', 'OF ');
+function sealSvg(): string {
+  return `<svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:60px;height:60px;">
+    <polygon points="50,2 56,18 74,6 68,24 88,20 78,36 96,40 82,50 96,60 78,64 88,80 68,76 74,94 56,82 50,98 44,82 26,94 32,76 12,80 22,64 4,60 18,50 4,40 22,36 12,20 32,24 26,6 44,18" fill="#1c2841" />
+    <circle cx="50" cy="50" r="28" fill="#1c2841" stroke="#eae8e0" stroke-width="2" />
+    <circle cx="50" cy="50" r="24" fill="#1c2841" stroke="#eae8e0" stroke-width="1" />
+  </svg>`;
+}
+
+function getLogoBase64(): string {
+  try {
+    const logoPath = path.join(process.cwd(), '../frontend/public/logo.png');
+    if (fs.existsSync(logoPath)) {
+      const bitmap = fs.readFileSync(logoPath);
+      return `data:image/png;base64,${bitmap.toString('base64')}`;
+    }
+  } catch {}
+  return '';
+}
+
+function getSignatureBase64(): string {
+  try {
+    const sigPath = path.join(process.cwd(), '../frontend/public/signature.png');
+    if (fs.existsSync(sigPath)) {
+      const bitmap = fs.readFileSync(sigPath);
+      return `data:image/png;base64,${bitmap.toString('base64')}`;
+    }
+  } catch {}
+  return '';
+}
+
+function buildCertificateHtml(data: CertificateData): string {
+  const formattedDate = formatDate(data.issueDate);
+  const logoBase64 = data.logoUrl || getLogoBase64();
+  const sigBase64 = getSignatureBase64();
+  
+  const rightLabel = 'Ismael KOANDA<br/>President of AEN';
 
   return `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="utf-8">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400;1,500&family=Inter:wght@300;400;500;600&family=Great+Vibes&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&display=swap');
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-
-  @page {
-    size: A4 landscape;
-    margin: 0;
-  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  @page { size: A4 landscape; margin: 0; }
 
   body {
     width: 1122px;
     height: 793px;
+    margin: 0;
+    padding: 0;
+    background-color: #eae8e0;
+    font-family: 'Cormorant Garamond', 'Times New Roman', serif;
+    color: #1c2841;
     overflow: hidden;
-    font-family: 'Inter', sans-serif;
-    background: #FFFEF8;
+    -webkit-print-color-adjust: exact;
   }
 
-  .certificate {
+  .cert-container {
     width: 1122px;
     height: 793px;
     position: relative;
-    background: #FFFEF8;
-    overflow: hidden;
+    padding: 17px; /* ~1.5% of 1122 */
   }
 
-  /* Outer border layers */
-  .border-outer {
+  .outer-border {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    border: 2px solid #1c2841;
+  }
+
+  .inner-border {
     position: absolute;
-    top: 12px; left: 12px; right: 12px; bottom: 12px;
-    border: 2px solid #1a2340;
-  }
-
-  .border-gold {
-    position: absolute;
-    top: 18px; left: 18px; right: 18px; bottom: 18px;
-    border: 1px solid #C9963B;
-  }
-
-  .border-inner {
-    position: absolute;
-    top: 24px; left: 24px; right: 24px; bottom: 24px;
-    border: 1px solid #1a2340;
-    opacity: 0.3;
-  }
-
-  .border-accent {
-    position: absolute;
-    top: 28px; left: 28px; right: 28px; bottom: 28px;
-    border: 0.5px solid #C9963B;
-    opacity: 0.5;
-  }
-
-  /* Corner decorations */
-  .corner { position: absolute; width: 40px; height: 40px; }
-  .corner::before, .corner::after {
-    content: ''; position: absolute; background: #C9963B;
-  }
-  .corner-tl { top: 14px; left: 14px; }
-  .corner-tl::before { top: 0; left: 0; width: 20px; height: 1.5px; }
-  .corner-tl::after { top: 0; left: 0; width: 1.5px; height: 20px; }
-  .corner-tr { top: 14px; right: 14px; }
-  .corner-tr::before { top: 0; right: 0; width: 20px; height: 1.5px; }
-  .corner-tr::after { top: 0; right: 0; width: 1.5px; height: 20px; }
-  .corner-bl { bottom: 14px; left: 14px; }
-  .corner-bl::before { bottom: 0; left: 0; width: 20px; height: 1.5px; }
-  .corner-bl::after { bottom: 0; left: 0; width: 1.5px; height: 20px; }
-  .corner-br { bottom: 14px; right: 14px; }
-  .corner-br::before { bottom: 0; right: 0; width: 20px; height: 1.5px; }
-  .corner-br::after { bottom: 0; right: 0; width: 1.5px; height: 20px; }
-
-  /* Subtle background pattern */
-  .bg-pattern {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background-image:
-      radial-gradient(circle at 20% 20%, rgba(26, 35, 64, 0.015) 0%, transparent 50%),
-      radial-gradient(circle at 80% 80%, rgba(201, 150, 59, 0.015) 0%, transparent 50%),
-      repeating-linear-gradient(45deg, transparent, transparent 40px, rgba(26, 35, 64, 0.008) 40px, rgba(26, 35, 64, 0.008) 41px),
-      repeating-linear-gradient(-45deg, transparent, transparent 40px, rgba(26, 35, 64, 0.008) 40px, rgba(26, 35, 64, 0.008) 41px);
+    top: 6px;
+    left: 6px;
+    right: 6px;
+    bottom: 6px;
+    border: 1.5px solid #1c2841;
     pointer-events: none;
   }
 
-  /* Content container */
+  .corner { position: absolute; width: 100px; height: 100px; }
+  .c-tl { top: 0; left: 0; transform: translate(-3%, -3%); }
+  .c-tr { top: 0; right: 0; transform: translate(3%, -3%) scaleX(-1); }
+  .c-bl { bottom: 0; left: 0; transform: translate(-3%, 3%) scaleY(-1); }
+  .c-br { bottom: 0; right: 0; transform: translate(3%, 3%) scale(-1, -1); }
+
+  .diamond-top { position: absolute; top: 0; left: 50%; transform: translate(-50%, -55%); background: #eae8e0; padding: 0 10px; }
+  .diamond-bot { position: absolute; bottom: 0; left: 50%; transform: translate(-50%, 55%); background: #eae8e0; padding: 0 10px; }
+
   .content {
     position: absolute;
-    top: 40px; left: 40px; right: 40px; bottom: 40px;
+    top: 0; left: 0; right: 0; bottom: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: space-between;
-    text-align: center;
+    padding: 40px 100px 32px;
   }
 
-  /* Logo area */
-  .logo-section {
-    margin-top: 10px;
-  }
-
-  .logo-img {
-    height: 60px;
-    max-width: 180px;
-    object-fit: contain;
-  }
-
-  /* Organization name */
-  .org-name {
-    font-family: 'Inter', sans-serif;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 5px;
-    text-transform: uppercase;
-    color: #1a2340;
-    margin-top: 6px;
-  }
-
-  /* Title */
-  .title-section {
-    margin-top: 2px;
-  }
-
-  .main-title {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 52px;
-    font-weight: 300;
-    color: #1a2340;
-    letter-spacing: 8px;
-    text-transform: uppercase;
-    line-height: 1;
-  }
-
-  .sub-title {
-    font-family: 'Cormorant Garamond', serif;
-    font-size: 20px;
-    font-weight: 500;
-    color: #C9963B;
-    letter-spacing: 6px;
-    text-transform: uppercase;
-    margin-top: 4px;
-  }
-
-  /* Decorative line */
-  .deco-line {
-    width: 120px;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, #C9963B, transparent);
-    margin: 8px auto;
-  }
-
-  /* Presented to */
-  .presented-to {
-    font-family: 'Inter', sans-serif;
-    font-size: 9px;
-    font-weight: 500;
-    letter-spacing: 4px;
-    text-transform: uppercase;
-    color: #8a7e6a;
-    margin-top: 8px;
-  }
-
-  /* Recipient name */
-  .recipient-name {
-    font-family: 'Great Vibes', cursive;
-    font-size: 48px;
-    color: #1a2340;
-    margin-top: 4px;
-    line-height: 1.2;
-    max-width: 700px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .recipient-name.small { font-size: 38px; }
-  .recipient-name.xsmall { font-size: 30px; }
-
-  /* Decorative line under name */
-  .name-line {
-    width: 280px;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, #C9963B, #e6a832, #C9963B, transparent);
-    margin: 6px auto;
-  }
-
-  /* Description */
-  .description {
-    font-family: 'Inter', sans-serif;
-    font-size: 10.5px;
-    font-weight: 300;
-    color: #4a4a4a;
-    line-height: 1.6;
-    max-width: 580px;
-    margin: 6px auto 0;
-    text-align: center;
-  }
-
-  /* Award info */
-  .award-info {
+  /* --- Header --- */
+  .header-block {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 2px;
-    margin-top: 4px;
+    gap: 5px;
   }
-
-  .award-info-line {
-    font-family: 'Inter', sans-serif;
-    font-size: 9px;
-    color: #1a2340;
-    letter-spacing: 1px;
+  .logo-img {
+    height: 110px;
+    width: auto;
+    object-fit: contain;
   }
-
-  .award-info-line strong {
-    font-weight: 600;
-    color: #C9963B;
+  .event-name {
     text-transform: uppercase;
-    font-size: 10px;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    font-weight: 600;
+  }
+  .cert-title {
+    font-size: 45px;
+    line-height: 1.1;
+    text-align: center;
+    font-weight: 700;
+  }
+  .subtitle {
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    font-weight: 600;
   }
 
-  /* Bottom section */
-  .bottom-section {
+  /* --- Name --- */
+  .name-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: 7px;
+  }
+  .recipient-name {
+    font-size: 43px;
+    font-weight: 700;
+    text-transform: uppercase;
+    text-align: center;
+    line-height: 1.1;
+  }
+  .dotted-rule {
+    width: 60%;
+    border-top: 1.5px dotted #1c2841;
+  }
+
+  /* --- Description --- */
+  .description-block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 90%;
+    gap: 3px;
+  }
+  .description-text {
+    font-size: 15px;
+    line-height: 1.5;
+    text-align: center;
+    font-weight: 500;
+  }
+
+  /* --- Footer --- */
+  .footer-row {
     width: 100%;
     display: flex;
     justify-content: space-between;
     align-items: flex-end;
-    margin-bottom: 8px;
-    padding: 0 20px;
+    height: 100px;
   }
-
-  /* Signatures */
-  .signatures {
-    display: flex;
-    gap: 120px;
-    justify-content: center;
-    flex: 1;
-  }
-
-  .signatures.single .signature-block {
-    margin: 0 auto;
-  }
-
-  .signature-block {
+  .sig-col {
+    width: 28%;
     display: flex;
     flex-direction: column;
     align-items: center;
-    min-width: 160px;
   }
-
-  .signature-img {
-    height: 36px;
-    max-width: 140px;
-    object-fit: contain;
-    margin-bottom: 2px;
-  }
-
-  .signature-line {
-    width: 140px;
-    height: 1px;
-    background: #1a2340;
-    opacity: 0.4;
-  }
-
-  .signature-name {
-    font-family: 'Inter', sans-serif;
-    font-size: 9px;
+  .date-val {
+    font-size: 15px;
     font-weight: 600;
-    color: #1a2340;
-    margin-top: 4px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    margin-bottom: 3px;
   }
-
-  .signature-title {
-    font-family: 'Inter', sans-serif;
-    font-size: 7.5px;
-    color: #8a7e6a;
-    margin-top: 1px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+  .sig-rule {
+    width: 100%;
+    border-top: 1.5px solid #1c2841;
+    margin-bottom: 6px;
   }
-
-  /* QR Code */
-  .qr-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 2px;
-  }
-
-  .qr-img {
-    width: 64px;
-    height: 64px;
-  }
-
-  .qr-label {
-    font-family: 'Inter', sans-serif;
-    font-size: 6px;
-    color: #8a7e6a;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-  }
-
-  /* Footer */
-  .footer {
+  .sig-title {
+    font-size: 12px;
+    font-weight: 600;
     text-align: center;
-    margin-top: 2px;
+    line-height: 1.25;
   }
-
-  .footer-id {
-    font-family: 'Inter', sans-serif;
-    font-size: 7px;
-    font-weight: 500;
-    color: #8a7e6a;
-    letter-spacing: 2px;
-  }
-
-  .footer-org {
-    font-family: 'Inter', sans-serif;
-    font-size: 7px;
-    font-weight: 400;
-    color: #1a2340;
-    letter-spacing: 3px;
-    margin-top: 2px;
-  }
-
-  /* Seal */
-  .seal {
-    width: 50px;
-    height: 50px;
-    border-radius: 50%;
-    border: 1.5px solid #C9963B;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto;
-  }
-
-  .seal-inner {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 0.5px solid #1a2340;
-    opacity: 0.3;
+  .seal-center {
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
   }
-
-  .seal-text {
-    font-family: 'Inter', sans-serif;
-    font-size: 5px;
-    font-weight: 700;
-    color: #1a2340;
-    letter-spacing: 1px;
-    text-transform: uppercase;
+  .sig-img-wrap {
+    width: 100%;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    margin-bottom: 1px;
   }
 </style>
 </head>
 <body>
-<div class="certificate">
-  <div class="border-outer"></div>
-  <div class="border-gold"></div>
-  <div class="border-inner"></div>
-  <div class="border-accent"></div>
-  <div class="corner corner-tl"></div>
-  <div class="corner corner-tr"></div>
-  <div class="corner corner-bl"></div>
-  <div class="corner corner-br"></div>
-  <div class="bg-pattern"></div>
+<div class="cert-container">
+  <div class="outer-border">
+    <div class="inner-border"></div>
 
-  <div class="content">
-    <div style="display:flex;flex-direction:column;align-items:center;">
-      <div class="logo-section">
-        ${data.logoUrl ? `<img src="${data.logoUrl}" class="logo-img" />` : ''}
+    <div class="corner c-tl">${victorianCornerSvg()}</div>
+    <div class="corner c-tr">${victorianCornerSvg()}</div>
+    <div class="corner c-bl">${victorianCornerSvg()}</div>
+    <div class="corner c-br">${victorianCornerSvg()}</div>
+
+    <div class="diamond-top">${centerDiamondSvg()}</div>
+    <div class="diamond-bot">${centerDiamondSvg()}</div>
+
+    <div class="content">
+
+      <!-- Header -->
+      <div class="header-block">
+        ${logoBase64 ? `<img src="${logoBase64}" class="logo-img" alt="AEN Logo">` : ''}
+        <div class="event-name">${data.eventName || 'PITCH NIGHT #1 2026'}</div>
+        <div class="cert-title">${data.certificateType || 'CERTIFICATE OF GRAND WINNER'}</div>
+        <div class="subtitle">THE FOLLOWING AWARD IS GIVEN TO</div>
       </div>
-      <div class="org-name">African Entrepreneurs Network</div>
 
-      <div class="title-section">
-        <div class="main-title">Certificate</div>
-        <div class="sub-title">${displayType}</div>
-        <div class="deco-line"></div>
+      <!-- Name -->
+      <div class="name-block">
+        <div class="recipient-name">${data.recipientName || 'SANDIE THÉO RUKIRUMURAME'}</div>
+        <div class="dotted-rule"></div>
       </div>
-    </div>
 
-    <div style="display:flex;flex-direction:column;align-items:center;margin-top:-8px;">
-      <div class="presented-to">Proudly Presented To</div>
-      <div class="recipient-name${data.recipientName.length > 30 ? ' xsmall' : data.recipientName.length > 22 ? ' small' : ''}">${data.recipientName}</div>
-      <div class="name-line"></div>
-      <div class="description">${data.description}</div>
-      <div class="award-info">
-        <div class="award-info-line"><strong>Award:</strong> ${data.award}</div>
-        <div class="award-info-line"><strong>Event:</strong> ${data.eventName}</div>
-        <div class="award-info-line"><strong>Date:</strong> ${formatDate(data.eventDate)}</div>
+      <!-- Description -->
+      <div class="description-block">
+        <div class="description-text">${data.description}</div>
       </div>
-    </div>
 
-    <div style="display:flex;flex-direction:column;align-items:center;width:100%;">
-      <div class="bottom-section">
-        <div class="qr-section">
-          <img src="${qrDataUrl}" class="qr-img" />
+      <!-- Footer: Date + Seal + Signature -->
+      <div class="footer-row">
+        
+        <div class="sig-col">
+          <div class="date-val">${formattedDate}</div>
+          <div class="sig-rule"></div>
+          <div class="sig-title">Date</div>
         </div>
 
-        <div class="signatures${signatoriesCount === 1 ? ' single' : ''}">
-          ${signatoriesHtml}
+        <div class="seal-center">
+          ${sealSvg()}
         </div>
 
-        <div style="width:64px;display:flex;flex-direction:column;align-items:center;">
-          <div class="seal">
-            <div class="seal-inner">
-              <div class="seal-text">AEN</div>
-            </div>
+        <div class="sig-col">
+          <div class="sig-img-wrap">
+            ${sigBase64 ? `<img src="${sigBase64}" style="height: 50px; width: auto; object-fit: contain;" alt="Signature">` : ''}
           </div>
+          <div class="sig-rule"></div>
+          <div class="sig-title">${rightLabel}</div>
         </div>
+
       </div>
 
-      <div class="footer">
-        <div class="footer-id">Credential ID: ${data.certificateId}</div>
-        <div class="footer-org">African Entrepreneurs Network</div>
-      </div>
     </div>
   </div>
 </div>
@@ -467,23 +328,7 @@ function buildCertificateHtml(data: CertificateData, qrDataUrl: string): string 
 }
 
 export async function generatePdf(data: CertificateData): Promise<Buffer> {
-  const qrData = [
-    `AEN Certificate`,
-    `ID: ${data.certificateId}`,
-    `Recipient: ${data.recipientName}`,
-    `Award: ${data.award}`,
-    `Event: ${data.eventName}`,
-    `Issued: ${formatDate(data.issueDate)}`,
-  ].join('\n');
-
-  const qrDataUrl = await QRCode.toDataURL(qrData, {
-    type: 'image/png',
-    width: 200,
-    margin: 1,
-    color: { dark: '#1a2340', light: '#ffffff' },
-  });
-
-  const html = buildCertificateHtml(data, qrDataUrl);
+  const html = buildCertificateHtml(data);
 
   const browser = await puppeteer.launch({
     headless: true,
@@ -492,14 +337,13 @@ export async function generatePdf(data: CertificateData): Promise<Buffer> {
 
   try {
     const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0', timeout: 30000 });
-    await page.waitForFunction('document.fonts.ready', { timeout: 10000 }).catch(() => {});
+    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
     const pdfBuffer = await page.pdf({
       format: 'A4',
       landscape: true,
       printBackground: true,
-      margin: { top: 0, right: 0, bottom: 0, left: 0 },
+      margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' },
     });
 
     return Buffer.from(pdfBuffer);
@@ -509,21 +353,5 @@ export async function generatePdf(data: CertificateData): Promise<Buffer> {
 }
 
 export async function generateCertificateHtmlPreview(data: CertificateData): Promise<string> {
-  const qrData = [
-    `AEN Certificate`,
-    `ID: ${data.certificateId}`,
-    `Recipient: ${data.recipientName}`,
-    `Award: ${data.award}`,
-    `Event: ${data.eventName}`,
-    `Issued: ${formatDate(data.issueDate)}`,
-  ].join('\n');
-
-  const qrDataUrl = await QRCode.toDataURL(qrData, {
-    type: 'image/png',
-    width: 200,
-    margin: 1,
-    color: { dark: '#1a2340', light: '#ffffff' },
-  });
-
-  return buildCertificateHtml(data, qrDataUrl);
+  return buildCertificateHtml(data);
 }

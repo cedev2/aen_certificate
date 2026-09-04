@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../hooks/useAuth';
-import { certificateAPI, signatoryAPI, brandAPI } from '../services/api';
+import { certificateAPI, brandAPI } from '../services/api';
 import DashboardHeader from '../components/dashboard/DashboardHeader';
 import StatisticsCards from '../components/dashboard/StatisticsCards';
 import CertificateForm from '../components/dashboard/CertificateForm';
@@ -12,13 +12,6 @@ import SuccessModal from '../components/dashboard/SuccessModal';
 import BulkGenerator from '../components/dashboard/BulkGenerator';
 import { motion } from 'framer-motion';
 
-export interface Signatory {
-  _id: string;
-  name: string;
-  title: string;
-  signatureUrl: string;
-  active: boolean;
-}
 
 export interface Certificate {
   _id: string;
@@ -44,24 +37,21 @@ export interface FormData {
   description: string;
   eventDate: string;
   issueDate: string;
-  signatoryIds: string[];
 }
 
 const defaultFormData: FormData = {
-  recipientName: '',
-  certificateType: 'Certificate of Achievement',
+  recipientName: 'SANDIE THÉO RUKIRUMURAME',
+  certificateType: 'CERTIFICATE OF GRAND WINNER',
   award: '',
-  eventName: '',
-  description: '',
-  eventDate: new Date().toISOString().split('T')[0],
-  issueDate: new Date().toISOString().split('T')[0],
-  signatoryIds: [],
+  eventName: 'PITCH NIGHT #1 2026',
+  description: 'For being recognized as the Grand Winner of AEN Pitch Night 2026, in recognition of an outstanding entrepreneurial concept and exceptional performance throughout the competition.',
+  eventDate: '2026-08-29',
+  issueDate: '2026-08-29',
 };
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const [formData, setFormData] = useState<FormData>(defaultFormData);
-  const [signatories, setSignatories] = useState<Signatory[]>([]);
   const [logoUrl, setLogoUrl] = useState('');
   const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [stats, setStats] = useState({ total: 0, generatedToday: 0, drafts: 0, currentEvent: 0 });
@@ -71,13 +61,6 @@ export default function DashboardPage() {
   const [successModal, setSuccessModal] = useState<{ certId: string; recipient: string; award: string } | null>(null);
   const [generating, setGenerating] = useState(false);
   const [search, setSearch] = useState('');
-
-  const loadSignatories = useCallback(async () => {
-    try {
-      const res = await signatoryAPI.list();
-      setSignatories(res.data);
-    } catch {}
-  }, []);
 
   const loadLogo = useCallback(async () => {
     try {
@@ -101,11 +84,10 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    loadSignatories();
     loadLogo();
     loadCertificates();
     loadStats();
-  }, [loadSignatories, loadLogo, loadCertificates, loadStats]);
+  }, [loadLogo, loadCertificates, loadStats]);
 
   useEffect(() => {
     const t = setTimeout(() => loadCertificates(), 300);
@@ -117,7 +99,7 @@ export default function DashboardPage() {
     try {
       const res = await certificateAPI.create(formData);
       setSuccessModal({
-        certId: res.data.certificateId,
+        certId: res.data._id,
         recipient: res.data.recipientName,
         award: res.data.award,
       });
@@ -143,22 +125,19 @@ export default function DashboardPage() {
     setFormData({
       ...defaultFormData,
       eventName: formData.eventName,
-      signatoryIds: formData.signatoryIds,
       certificateType: formData.certificateType,
     });
     setSuccessModal(null);
   };
 
-  const handleDownloadPdf = async (certId: string) => {
+  const handleDownloadPdf = async (certId: string, recipientName?: string) => {
     try {
-      const res = await certificateAPI.get(certId);
-      // Generate PDF client-side using a new window
-      const previewUrl = `/api/certificates/${certId}/preview`;
-      window.open(previewUrl, '_blank');
-    } catch {}
+      await certificateAPI.downloadPdf(certId, recipientName);
+    } catch (err) {
+      alert('Failed to download PDF.');
+    }
   };
 
-  const selectedSignatories = signatories.filter(s => formData.signatoryIds.includes(s._id));
 
   return (
     <div className="min-h-screen bg-gray-50/50">
@@ -210,13 +189,11 @@ export default function DashboardPage() {
             <CertificateForm
               formData={formData}
               setFormData={setFormData}
-              signatories={signatories}
               onGenerate={handleGenerate}
               generating={generating}
             />
             <CertificatePreview
               formData={formData}
-              signatories={selectedSignatories}
               logoUrl={logoUrl}
             />
           </div>
@@ -228,6 +205,7 @@ export default function DashboardPage() {
             setSearch={setSearch}
             onRevoke={handleRevoke}
             onRefresh={loadCertificates}
+            onDownloadPdf={handleDownloadPdf}
           />
         </motion.div>
       </main>
@@ -235,8 +213,8 @@ export default function DashboardPage() {
       {/* Modals */}
       {showSignatoryModal && (
         <SignatoryManager
-          signatories={signatories}
-          onClose={() => { setShowSignatoryModal(false); loadSignatories(); }}
+          signatories={[]}
+          onClose={() => setShowSignatoryModal(false)}
         />
       )}
       {showBrandModal && (
@@ -247,7 +225,6 @@ export default function DashboardPage() {
       )}
       {showBulkModal && (
         <BulkGenerator
-          signatories={signatories}
           logoUrl={logoUrl}
           onClose={() => setShowBulkModal(false)}
           onComplete={() => { loadCertificates(); loadStats(); }}
@@ -260,6 +237,7 @@ export default function DashboardPage() {
           award={successModal.award}
           onClose={() => setSuccessModal(null)}
           onGenerateAnother={handleGenerateAnother}
+          onDownloadPdf={handleDownloadPdf}
         />
       )}
     </div>

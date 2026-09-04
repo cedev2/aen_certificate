@@ -1,10 +1,9 @@
-import { FormData, Signatory } from '../../pages/DashboardPage';
+import { FormData } from '../../pages/DashboardPage';
 import { generateQrDataUrl } from '../../utils/qrHelper';
 import { useEffect, useState } from 'react';
 
 interface Props {
   formData: FormData;
-  signatories: Signatory[];
   logoUrl: string;
 }
 
@@ -17,239 +16,205 @@ function formatDate(dateStr: string): string {
   });
 }
 
-function generatePreviewId(): string {
-  const year = new Date().getFullYear();
-  return `AEN-${year}-XXXX`;
-}
+const VictorianCorner = ({ style }: { style?: React.CSSProperties }) => (
+  <svg viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" style={style}>
+    <path d="M8 8 H45 V12 H12 V45 H8 Z" fill="#1c2841" />
+    <path d="M2 2 H30 V5 H5 V30 H2 Z" fill="#1c2841" />
+    <path d="M 30 5 C 42 -2, 55 2, 68 8 C 58 12, 45 10, 30 5 Z" fill="#1c2841" />
+    <path d="M 60 7 C 75 0, 90 4, 102 10 C 90 14, 75 12, 60 7 Z" fill="#1c2841" />
+    <path d="M 95 9 C 105 5, 112 7, 118 10 C 112 13, 104 12, 95 9 Z" fill="#1c2841" />
+    <path d="M 5 30 C -2 42, 2 55, 8 68 C 12 58, 10 45, 5 30 Z" fill="#1c2841" />
+    <path d="M 7 60 C 0 75, 4 90, 10 102 C 14 90, 12 75, 7 60 Z" fill="#1c2841" />
+    <path d="M 9 95 C 5 105, 7 112, 10 118 C 13 112, 12 104, 9 95 Z" fill="#1c2841" />
+    <path d="M 15 15 C 32 32, 45 22, 38 14 C 32 8, 18 18, 15 15 Z" fill="#1c2841" />
+    <path d="M 15 15 C 32 32, 22 45, 14 38 C 8 32, 18 18, 15 15 Z" fill="#1c2841" />
+    <path d="M 20 20 C 45 45, 62 28, 50 16 C 38 4, 24 24, 20 20 Z" stroke="#1c2841" strokeWidth="2.2" fill="none" />
+    <path d="M 20 20 C 45 45, 28 62, 16 50 C 4 38, 24 24, 20 20 Z" stroke="#1c2841" strokeWidth="2.2" fill="none" />
+    <circle cx="32" cy="32" r="4.5" fill="#1c2841" />
+    <circle cx="46" cy="18" r="2.8" fill="#1c2841" />
+    <circle cx="18" cy="46" r="2.8" fill="#1c2841" />
+  </svg>
+);
 
-export default function CertificatePreview({ formData, signatories, logoUrl }: Props) {
+const CenterDiamond = ({ style }: { style?: React.CSSProperties }) => (
+  <svg viewBox="0 0 40 20" fill="none" xmlns="http://www.w3.org/2000/svg" style={style}>
+    <path d="M 0 10 L 15 10" stroke="#1c2841" strokeWidth="1.5" />
+    <path d="M 25 10 L 40 10" stroke="#1c2841" strokeWidth="1.5" />
+    <polygon points="20,2 25,10 20,18 15,10" fill="#1c2841" />
+  </svg>
+);
+
+export default function CertificatePreview({ formData, logoUrl }: Props) {
   const [qrDataUrl, setQrDataUrl] = useState('');
 
   useEffect(() => {
     const data = [
       `AEN Certificate`,
-      `ID: ${generatePreviewId()}`,
       `Recipient: ${formData.recipientName || '—'}`,
-      `Award: ${formData.award || '—'}`,
       `Event: ${formData.eventName || '—'}`,
       `Issued: ${formatDate(formData.issueDate)}`,
     ].join('\n');
     generateQrDataUrl(data).then(setQrDataUrl);
-  }, [formData.recipientName, formData.award, formData.eventName, formData.issueDate]);
+  }, [formData.recipientName, formData.eventName, formData.issueDate]);
 
-  const displayType = formData.certificateType.toUpperCase().replace('CERTIFICATE OF ', 'OF ');
-  const nameLen = formData.recipientName.length;
+  const rightLabel = 'Ismael KOANDA\nPresident of AEN';
+  const serif = "'Cormorant Garamond', 'Times New Roman', serif";
+  const navy = '#1c2841';
+  const beige = '#eae8e0';
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-      <h3 className="text-lg font-semibold text-navy-900 mb-3">Live Preview</h3>
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 w-full flex flex-col justify-center">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold text-navy-900">Live Preview</h3>
+      </div>
 
+      {/* Certificate Canvas */}
       <div
-        className="relative overflow-hidden rounded-xl border border-gray-200"
-        style={{ aspectRatio: '297 / 210' }}
+        style={{
+          containerType: 'inline-size',
+          aspectRatio: '1.414 / 1',
+          backgroundColor: beige,
+          position: 'relative',
+          overflow: 'hidden',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.15)',
+        }}
       >
-        {/* A4 Landscape container */}
-        <div
-          className="relative w-full h-full"
-          style={{
-            background: '#FFFEF8',
-            fontFamily: "'Inter', sans-serif",
-          }}
-        >
-          {/* Border layers */}
-          <div className="absolute inset-[3px] border-2 border-navy-900 pointer-events-none" />
-          <div className="absolute inset-[5px] border border-aen-gold/60 pointer-events-none" />
-          <div className="absolute inset-[7px] border border-navy-900/20 pointer-events-none" />
-          <div className="absolute inset-[8px] border border-aen-gold/30 pointer-events-none" />
+        {/* Outer padding shell */}
+        <div style={{ position: 'absolute', inset: '1.5cqw' }}>
 
-          {/* Corner decorations */}
-          {['top-[3px] left-[3px]', 'top-[3px] right-[3px]', 'bottom-[3px] left-[3px]', 'bottom-[3px] right-[3px]'].map((pos, i) => (
-            <div key={i} className={`absolute ${pos} w-3 h-3`}>
-              <div className="absolute top-0 left-0 w-full h-[1px] bg-aen-gold" />
-              <div className={`absolute top-0 left-0 h-full w-[1px] bg-aen-gold ${i % 2 === 1 ? 'right-0 left-auto' : ''}`} />
+          {/* Double border frame */}
+          <div style={{
+            width: '100%', height: '100%', position: 'relative',
+            border: `0.18cqw solid ${navy}`,
+          }}>
+            <div style={{
+              position: 'absolute', inset: '0.55cqw',
+              border: `0.12cqw solid ${navy}`,
+              pointerEvents: 'none',
+            }} />
+
+            {/* Victorian corner ornaments */}
+            <VictorianCorner style={{ position: 'absolute', top: 0, left: 0, width: '9cqw', height: '9cqw', transform: 'translate(-3%, -3%)' }} />
+            <VictorianCorner style={{ position: 'absolute', top: 0, right: 0, width: '9cqw', height: '9cqw', transform: 'translate(3%, -3%) scaleX(-1)' }} />
+            <VictorianCorner style={{ position: 'absolute', bottom: 0, left: 0, width: '9cqw', height: '9cqw', transform: 'translate(-3%, 3%) scaleY(-1)' }} />
+            <VictorianCorner style={{ position: 'absolute', bottom: 0, right: 0, width: '9cqw', height: '9cqw', transform: 'translate(3%, 3%) scale(-1,-1)' }} />
+
+            {/* Top & bottom centre diamond ornaments */}
+            <div style={{
+              position: 'absolute', top: 0, left: '50%',
+              transform: 'translate(-50%, -55%)',
+              background: beige, padding: '0 1cqw',
+            }}>
+              <CenterDiamond style={{ width: '7cqw', height: '1.8cqw' }} />
             </div>
-          ))}
+            <div style={{
+              position: 'absolute', bottom: 0, left: '50%',
+              transform: 'translate(-50%, 55%)',
+              background: beige, padding: '0 1cqw',
+            }}>
+              <CenterDiamond style={{ width: '7cqw', height: '1.8cqw' }} />
+            </div>
 
-          {/* Background pattern */}
-          <div
-            className="absolute inset-0 pointer-events-none opacity-[0.03]"
-            style={{
-              backgroundImage: `
-                repeating-linear-gradient(45deg, transparent, transparent 30px, #1a2340 30px, #1a2340 30.5px),
-                repeating-linear-gradient(-45deg, transparent, transparent 30px, #1a2340 30px, #1a2340 30.5px)
-              `,
-            }}
-          />
+            {/* === CONTENT AREA === */}
+            <div style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '3.5cqw 9cqw 2.8cqw',
+              color: navy,
+            }}>
 
-          {/* Content */}
-          <div className="absolute inset-[14px] flex flex-col items-center justify-between text-center px-4 py-2">
-            {/* Top: Logo + org name */}
-            <div className="flex flex-col items-center mt-0.5">
-              {logoUrl && (
+              {/* TOP: Logo + Event + Certificate Title + Subtitle */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5cqw', width: '100%' }}>
                 <img
-                  src={logoUrl}
+                  src={logoUrl || '/logo.png'}
                   alt="AEN Logo"
-                  className="h-7 sm:h-10 md:h-12 max-w-[120px] sm:max-w-[140px] object-contain mb-0.5"
+                  style={{ height: '10cqw', width: 'auto', objectFit: 'contain' }}
                 />
-              )}
-              <span
-                className="text-[5px] sm:text-[6px] md:text-[7px] font-semibold tracking-[3px] text-navy-900 uppercase"
-                style={{ fontFamily: "'Inter', sans-serif" }}
-              >
-                African Entrepreneurs Network
-              </span>
-            </div>
+                <p style={{ fontSize: '1cqw', letterSpacing: '0.18em', fontWeight: 600, textTransform: 'uppercase', margin: 0 }}>
+                  {formData.eventName || 'PITCH NIGHT #1 2026'}
+                </p>
+                <h1 style={{
+                  fontFamily: serif, fontSize: '4cqw', fontWeight: 700,
+                  lineHeight: 1.1, textAlign: 'center', margin: 0,
+                }}>
+                  {formData.certificateType || 'CERTIFICATE OF GRAND WINNER'}
+                </h1>
+                <p style={{ fontSize: '0.95cqw', letterSpacing: '0.22em', fontWeight: 600, textTransform: 'uppercase', margin: 0 }}>
+                  THE FOLLOWING AWARD IS GIVEN TO
+                </p>
+              </div>
 
-            {/* Title */}
-            <div className="flex flex-col items-center mt-[-2px]">
-              <h2
-                className="text-[22px] sm:text-[28px] md:text-[34px] font-light text-navy-900 uppercase tracking-[5px]"
-                style={{ fontFamily: "'Cormorant Garamond', serif", lineHeight: 1 }}
-              >
-                Certificate
-              </h2>
-              <p
-                className="text-[8px] sm:text-[10px] md:text-[12px] font-medium text-aen-gold uppercase tracking-[4px] mt-0.5"
-                style={{ fontFamily: "'Cormorant Garamond', serif" }}
-              >
-                {displayType}
-              </p>
-              <div className="w-16 sm:w-20 h-[1px] bg-gradient-to-r from-transparent via-aen-gold to-transparent my-1.5" />
-            </div>
+              {/* MIDDLE: Name + Rule */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', gap: '0.6cqw' }}>
+                <h2 style={{
+                  fontFamily: serif, fontSize: '3.8cqw', fontWeight: 700,
+                  lineHeight: 1.1, textAlign: 'center', margin: 0, textTransform: 'uppercase',
+                }}>
+                  {formData.recipientName || 'SANDIE THÉO RUKIRUMURAME'}
+                </h2>
+                <div style={{ width: '60%', borderTop: `1.5px dotted ${navy}` }} />
+              </div>
 
-            {/* Presented to + Name */}
-            <div className="flex flex-col items-center">
-              <span
-                className="text-[4px] sm:text-[5px] md:text-[6px] font-medium tracking-[3px] text-gray-400 uppercase mb-0.5"
-                style={{ fontFamily: "'Inter', sans-serif" }}
-              >
-                Proudly Presented To
-              </span>
-              <span
-                className={`text-navy-900 leading-tight ${
-                  nameLen > 30
-                    ? 'text-[18px] sm:text-[22px] md:text-[26px]'
-                    : nameLen > 20
-                    ? 'text-[22px] sm:text-[28px] md:text-[34px]'
-                    : 'text-[26px] sm:text-[34px] md:text-[40px]'
-                }`}
-                style={{ fontFamily: "'Great Vibes', cursive" }}
-              >
-                {formData.recipientName || 'Recipient Name'}
-              </span>
-              <div className="w-36 sm:w-44 h-[1px] bg-gradient-to-r from-transparent via-aen-gold to-transparent mt-1" />
-            </div>
-
-            {/* Description */}
-            <div className="flex flex-col items-center mt-[-2px]">
-              {formData.description && (
-                <p
-                  className="text-[4.5px] sm:text-[5.5px] md:text-[7px] text-gray-500 leading-relaxed max-w-[320px] sm:max-w-[380px] md:max-w-[420px]"
-                  style={{ fontFamily: "'Inter', sans-serif" }}
-                >
+              {/* DESCRIPTION */}
+              <div style={{ width: '90%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3cqw' }}>
+                <p style={{
+                  fontFamily: serif, fontSize: '1.35cqw', lineHeight: 1.5,
+                  textAlign: 'center', margin: 0, fontWeight: 500,
+                }}>
                   {formData.description}
                 </p>
-              )}
-
-              {/* Award info */}
-              <div className="flex flex-col items-center gap-px mt-1.5">
-                {formData.award && (
-                  <p className="text-[4px] sm:text-[5px] md:text-[6px] text-navy-900" style={{ fontFamily: "'Inter', sans-serif" }}>
-                    <strong className="font-semibold text-aen-gold uppercase text-[5px] sm:text-[6px] md:text-[7px]">Award:</strong>{' '}
-                    {formData.award}
-                  </p>
-                )}
-                {formData.eventName && (
-                  <p className="text-[4px] sm:text-[5px] md:text-[6px] text-navy-900" style={{ fontFamily: "'Inter', sans-serif" }}>
-                    <strong className="font-semibold text-aen-gold uppercase text-[5px] sm:text-[6px] md:text-[7px]">Event:</strong>{' '}
-                    {formData.eventName}
-                  </p>
-                )}
-                {formData.eventDate && (
-                  <p className="text-[4px] sm:text-[5px] md:text-[6px] text-navy-900" style={{ fontFamily: "'Inter', sans-serif" }}>
-                    <strong className="font-semibold text-aen-gold uppercase text-[5px] sm:text-[6px] md:text-[7px]">Date:</strong>{' '}
-                    {formatDate(formData.eventDate)}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            {/* Bottom: QR + Signatures + Seal */}
-            <div className="w-full flex items-end justify-between px-2 mb-0.5">
-              {/* QR Code */}
-              <div className="flex flex-col items-center">
-                {qrDataUrl && (
-                  <img src={qrDataUrl} alt="QR" className="w-10 h-10 sm:w-12 sm:h-12 md:w-14 md:h-14" />
-                )}
-                <span className="text-[3px] sm:text-[4px] text-gray-400 uppercase tracking-wider mt-0.5" style={{ fontFamily: "'Inter', sans-serif" }}>
-                  Verify
-                </span>
               </div>
 
-              {/* Signatures */}
-              <div className={`flex ${signatories.length === 1 ? 'justify-center' : 'gap-6 sm:gap-10 md:gap-16'}`}>
-                {signatories.length > 0 ? (
-                  signatories.map((s) => (
-                    <div key={s._id} className="flex flex-col items-center min-w-[60px]">
-                      {s.signatureUrl ? (
-                        <img
-                          src={s.signatureUrl}
-                          alt={s.name}
-                          className="h-6 sm:h-8 md:h-9 max-w-[70px] object-contain mb-0.5"
-                        />
-                      ) : (
-                        <div className="h-6 sm:h-8 md:h-9 mb-0.5" />
-                      )}
-                      <div className="w-16 sm:w-20 h-[0.5px] bg-navy-900/30" />
-                      <span className="text-[4px] sm:text-[5px] md:text-[5.5px] font-semibold text-navy-900 uppercase tracking-wider mt-0.5" style={{ fontFamily: "'Inter', sans-serif" }}>
-                        {s.name}
-                      </span>
-                      <span className="text-[3px] sm:text-[4px] md:text-[4.5px] text-gray-400 uppercase tracking-wider" style={{ fontFamily: "'Inter', sans-serif" }}>
-                        {s.title}
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <div className="flex gap-8 sm:gap-12">
-                    <div className="flex flex-col items-center min-w-[60px]">
-                      <div className="h-6 sm:h-8 md:h-9 mb-0.5" />
-                      <div className="w-16 sm:w-20 h-[0.5px] bg-navy-900/20" />
-                      <span className="text-[4px] sm:text-[5px] text-gray-300 mt-0.5" style={{ fontFamily: "'Inter', sans-serif" }}>
-                        Signatory
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-center min-w-[60px]">
-                      <div className="h-6 sm:h-8 md:h-9 mb-0.5" />
-                      <div className="w-16 sm:w-20 h-[0.5px] bg-navy-900/20" />
-                      <span className="text-[4px] sm:text-[5px] text-gray-300 mt-0.5" style={{ fontFamily: "'Inter', sans-serif" }}>
-                        Signatory
-                      </span>
-                    </div>
-                  </div>
-                )}
-              </div>
+              {/* BOTTOM: Date + QR (small) + Signature */}
+              <div style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end',
+                width: '100%', height: '9cqw',
+              }}>
+                {/* Date block */}
+                <div style={{ width: '28%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <p style={{ fontFamily: serif, fontSize: '1.3cqw', fontWeight: 600, marginBottom: '0.3cqw' }}>
+                    {formatDate(formData.issueDate)}
+                  </p>
+                  <div style={{ width: '100%', borderTop: `1.5px solid ${navy}`, marginBottom: '0.5cqw' }} />
+                  <p style={{ fontFamily: serif, fontSize: '1.1cqw', fontWeight: 600, margin: 0 }}>Date</p>
+                </div>
 
-              {/* Seal */}
-              <div className="flex flex-col items-center">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 md:w-11 md:h-11 rounded-full border border-aen-gold flex items-center justify-center">
-                  <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full border border-navy-900/20 flex items-center justify-center">
-                    <span className="text-[4px] sm:text-[5px] font-bold text-navy-900 tracking-wider" style={{ fontFamily: "'Inter', sans-serif" }}>
-                      AEN
-                    </span>
-                  </div>
+                {/* Small decorative seal */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
+                  <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '6cqw', height: '6cqw' }}>
+                    {/* Starburst outer ring */}
+                    <polygon points="50,2 56,18 74,6 68,24 88,20 78,36 96,40 82,50 96,60 78,64 88,80 68,76 74,94 56,82 50,98 44,82 26,94 32,76 12,80 22,64 4,60 18,50 4,40 22,36 12,20 32,24 26,6 44,18" fill="#1c2841" />
+                    {/* Inner circle */}
+                    <circle cx="50" cy="50" r="28" fill="#1c2841" stroke="#eae8e0" strokeWidth="2" />
+                    <circle cx="50" cy="50" r="24" fill="#1c2841" stroke="#eae8e0" strokeWidth="1" />
+                  </svg>
+                </div>
+
+                {/* President signature block */}
+                <div style={{ width: '28%', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <img
+                    src="/signature.png"
+                    alt="Signature"
+                    style={{ height: '4.5cqw', width: 'auto', objectFit: 'contain', marginBottom: '0.1cqw' }}
+                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                  />
+                  <div style={{ width: '100%', borderTop: `1.5px solid ${navy}`, marginBottom: '0.5cqw' }} />
+                  <p style={{
+                    fontFamily: serif, fontSize: '1.1cqw', fontWeight: 600,
+                    margin: 0, textAlign: 'center', lineHeight: 1.25, whiteSpace: 'pre-line',
+                  }}>
+                    {rightLabel}
+                  </p>
                 </div>
               </div>
-            </div>
 
-            {/* Footer */}
-            <div className="flex flex-col items-center mt-[-2px]">
-              <span className="text-[3.5px] sm:text-[4px] md:text-[4.5px] font-medium text-gray-400 tracking-[2px] uppercase" style={{ fontFamily: "'Inter', sans-serif" }}>
-                Credential ID: {generatePreviewId()}
-              </span>
-              <span className="text-[3.5px] sm:text-[4px] md:text-[4.5px] font-normal text-navy-900 tracking-[3px] uppercase mt-px" style={{ fontFamily: "'Inter', sans-serif" }}>
-                African Entrepreneurs Network
-              </span>
             </div>
+            {/* === END CONTENT === */}
+
           </div>
         </div>
       </div>

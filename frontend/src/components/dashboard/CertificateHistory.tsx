@@ -8,6 +8,7 @@ interface Props {
   setSearch: (v: string) => void;
   onRevoke: (id: string) => void;
   onRefresh: () => void;
+  onDownloadPdf?: (id: string, recipientName: string) => void;
 }
 
 function formatDateShort(dateStr: string) {
@@ -25,7 +26,7 @@ const statusColors: Record<string, string> = {
   revoked: 'bg-red-50 text-red-700 border-red-200',
 };
 
-export default function CertificateHistory({ certificates, search, setSearch, onRevoke, onRefresh }: Props) {
+export default function CertificateHistory({ certificates, search, setSearch, onRevoke, onRefresh, onDownloadPdf }: Props) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
       <div className="flex items-center justify-between mb-4">
@@ -95,7 +96,11 @@ export default function CertificateHistory({ certificates, search, setSearch, on
                     <div className="flex items-center justify-end gap-1">
                       {cert.status !== 'revoked' && (
                         <>
-                          <button className="p-1.5 text-gray-400 hover:text-navy-900 hover:bg-gray-100 rounded-md transition-all" title="Download">
+                          <button
+                            onClick={() => onDownloadPdf && onDownloadPdf(cert._id, cert.recipientName)}
+                            className="p-1.5 text-gray-400 hover:text-navy-900 hover:bg-gray-100 rounded-md transition-all"
+                            title="Download PDF"
+                          >
                             <Download size={14} />
                           </button>
                           <button

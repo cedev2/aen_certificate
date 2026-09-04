@@ -1,39 +1,17 @@
-import { FormData, Signatory } from '../../pages/DashboardPage';
+import { FormData } from '../../pages/DashboardPage';
 import { Loader2 } from 'lucide-react';
 
-const certTypes = [
-  'Certificate of Achievement',
-  'Certificate of Excellence',
-  'Winner Certificate',
-  'First Place Award',
-  'Second Place Award',
-  'Third Place Award',
-  'Certificate of Recognition',
-  'Certificate of Appreciation',
-  'Certificate of Participation',
-  'Custom',
-];
 
 interface Props {
   formData: FormData;
   setFormData: React.Dispatch<React.SetStateAction<FormData>>;
-  signatories: Signatory[];
   onGenerate: () => void;
   generating: boolean;
 }
 
-export default function CertificateForm({ formData, setFormData, signatories, onGenerate, generating }: Props) {
+export default function CertificateForm({ formData, setFormData, onGenerate, generating }: Props) {
   const update = (field: keyof FormData, value: any) =>
     setFormData((prev) => ({ ...prev, [field]: value }));
-
-  const toggleSignatory = (id: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      signatoryIds: prev.signatoryIds.includes(id)
-        ? prev.signatoryIds.filter((s) => s !== id)
-        : [...prev.signatoryIds, id],
-    }));
-  };
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
@@ -59,15 +37,13 @@ export default function CertificateForm({ formData, setFormData, signatories, on
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Certificate Type <span className="text-red-400">*</span>
           </label>
-          <select
+          <input
+            type="text"
             value={formData.certificateType}
             onChange={(e) => update('certificateType', e.target.value)}
-            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-navy-900 focus:outline-none focus:ring-2 focus:ring-navy-900/10 focus:border-navy-900/20 transition-all bg-white"
-          >
-            {certTypes.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
-          </select>
+            placeholder="e.g. CERTIFICATE OF GRAND WINNER"
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-navy-900 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-navy-900/10 focus:border-navy-900/20 transition-all"
+          />
         </div>
 
         {/* Award / Category */}
@@ -132,46 +108,10 @@ export default function CertificateForm({ formData, setFormData, signatories, on
           </div>
         </div>
 
-        {/* Signatories */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Signatories <span className="text-red-400">*</span>
-          </label>
-          {signatories.length === 0 ? (
-            <p className="text-xs text-gray-400 bg-gray-50 rounded-lg p-3">
-              No signatories found. Add signatories in the Signatory Manager.
-            </p>
-          ) : (
-            <div className="space-y-1.5">
-              {signatories.map((s) => (
-                <label
-                  key={s._id}
-                  className={`flex items-center gap-3 p-2.5 rounded-lg border cursor-pointer transition-all ${
-                    formData.signatoryIds.includes(s._id)
-                      ? 'border-navy-900/20 bg-navy-50/50'
-                      : 'border-gray-100 hover:border-gray-200'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={formData.signatoryIds.includes(s._id)}
-                    onChange={() => toggleSignatory(s._id)}
-                    className="w-4 h-4 rounded border-gray-300 text-navy-900 focus:ring-navy-900/20"
-                  />
-                  <div>
-                    <p className="text-sm font-medium text-navy-900">{s.name}</p>
-                    <p className="text-xs text-gray-400">{s.title}</p>
-                  </div>
-                </label>
-              ))}
-            </div>
-          )}
-        </div>
-
         {/* Generate button */}
         <button
           onClick={onGenerate}
-          disabled={generating || !formData.recipientName || !formData.award || !formData.eventName || formData.signatoryIds.length === 0}
+          disabled={generating || !formData.recipientName || !formData.award || !formData.eventName}
           className="w-full py-3 bg-navy-900 text-white text-sm font-semibold rounded-xl hover:bg-navy-800 focus:outline-none focus:ring-2 focus:ring-navy-900/20 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 mt-2"
         >
           {generating ? (

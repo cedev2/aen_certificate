@@ -7,9 +7,10 @@ interface Props {
   award: string;
   onClose: () => void;
   onGenerateAnother: () => void;
+  onDownloadPdf?: (certId: string, recipient: string) => void;
 }
 
-export default function SuccessModal({ certId, recipient, award, onClose, onGenerateAnother }: Props) {
+export default function SuccessModal({ certId, recipient, award, onClose, onGenerateAnother, onDownloadPdf }: Props) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <motion.div
@@ -52,7 +53,10 @@ export default function SuccessModal({ certId, recipient, award, onClose, onGene
 
           <div className="space-y-2.5">
             <button
-              onClick={onClose}
+              onClick={() => {
+                if (onDownloadPdf) onDownloadPdf(certId, recipient);
+                onClose();
+              }}
               className="w-full py-2.5 bg-navy-900 text-white text-sm font-medium rounded-xl hover:bg-navy-800 transition-all flex items-center justify-center gap-2"
             >
               <Download size={15} />
