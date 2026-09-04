@@ -4,6 +4,7 @@ import Signatory from '../models/Signatory';
 import { authenticate } from '../middleware/auth';
 import { AuthRequest } from '../types';
 import { generateCertificateId, generateQrData } from '../utils/certificate';
+import { generatePdf } from '../utils/pdfGenerator';
 
 const router = Router();
 
@@ -179,6 +180,37 @@ router.delete('/:id', async (req: AuthRequest, res) => {
     res.json({ message: 'Certificate deleted.' });
   } catch (error) {
     res.status(500).json({ error: 'Failed to delete certificate.' });
+  }
+});
+
+// GET /api/certificates/:id/pdf
+router.get('/:id/pdf', async (req: AuthRequest, res) => {
+  try {
+    const cert = await Certificate.findById(req.params.id)
+      .populate('signatoryIds', 'name title signatureUrl');
+
+    if (!cert) return res.status(404).json({ error: 'Certificate not found.' });
+
+    const pdfBuffer = await generatePdf({
+      certificateId: cert.certificateId,
+      recipientName: cert.recipientName,
+      certificateType: cert.certificateType,
+      award: cert.award,
+      eventName: cert.eventName,
+      description: cert.description,
+      eventDate: cert.eventDate,
+      issueDate: cert.issueDate,
+      logoUrl: '',
+      signatories: (cert.signatoryIds as any[]) || [],
+    });
+
+    const safeName = cert.recipientName.replace(/[^a-zA-Z0-9]/g, '_');
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="Certificate_${safeName}.pdf"`);
+    res.send(pdfBuffer);
+  } catch (error: any) {
+    console.error('PDF generation error:', error);
+    res.status(500).json({ error: 'Failed to generate PDF.' });
   }
 });
 

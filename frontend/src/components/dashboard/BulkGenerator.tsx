@@ -1,11 +1,9 @@
 import { useState, useRef } from 'react';
 import { certificateAPI } from '../../services/api';
-import { Signatory } from '../../pages/DashboardPage';
 import { X, Upload, FileText, Loader2, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface Props {
-  signatories: Signatory[];
   logoUrl: string;
   onClose: () => void;
   onComplete: () => void;
@@ -20,7 +18,7 @@ interface CsvRow {
   eventDate: string;
 }
 
-export default function BulkGenerator({ signatories, logoUrl, onClose, onComplete }: Props) {
+export default function BulkGenerator({ logoUrl, onClose, onComplete }: Props) {
   const [records, setRecords] = useState<CsvRow[]>([]);
   const [parsing, setParsing] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -72,7 +70,6 @@ export default function BulkGenerator({ signatories, logoUrl, onClose, onComplet
           description: r.description,
           eventDate: r.eventDate || new Date().toISOString().split('T')[0],
           issueDate: new Date().toISOString().split('T')[0],
-          signatoryIds: signatories.slice(0, 2).map((s) => s._id),
         });
       } catch {}
       setProgress({ current: i + 1, total: records.length });
