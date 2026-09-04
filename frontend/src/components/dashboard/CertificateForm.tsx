@@ -7,15 +7,20 @@ interface Props {
   setFormData: React.Dispatch<React.SetStateAction<FormData>>;
   onGenerate: () => void;
   generating: boolean;
+  editingCert?: { recipientName: string } | null;
+  onUpdate?: () => void;
+  onCancelEdit?: () => void;
 }
 
-export default function CertificateForm({ formData, setFormData, onGenerate, generating }: Props) {
+export default function CertificateForm({ formData, setFormData, onGenerate, generating, editingCert, onUpdate, onCancelEdit }: Props) {
   const update = (field: keyof FormData, value: any) =>
     setFormData((prev) => ({ ...prev, [field]: value }));
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-      <h3 className="text-lg font-semibold text-navy-900 mb-5">Certificate Information</h3>
+      <h3 className="text-lg font-semibold text-navy-900 mb-5">
+        {editingCert ? `Edit Certificate — ${editingCert.recipientName}` : 'Certificate Information'}
+      </h3>
 
       <div className="space-y-4">
         {/* Recipient Name */}
@@ -108,21 +113,46 @@ export default function CertificateForm({ formData, setFormData, onGenerate, gen
           </div>
         </div>
 
-        {/* Generate button */}
-        <button
-          onClick={onGenerate}
-          disabled={generating || !formData.recipientName || !formData.award || !formData.eventName}
-          className="w-full py-3 bg-navy-900 text-white text-sm font-semibold rounded-xl hover:bg-navy-800 focus:outline-none focus:ring-2 focus:ring-navy-900/20 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 mt-2"
-        >
-          {generating ? (
-            <>
-              <Loader2 size={16} className="animate-spin" />
-              Generating Certificate...
-            </>
-          ) : (
-            'Generate Certificate'
-          )}
-        </button>
+        {/* Generate / Update button */}
+        {editingCert ? (
+          <div className="flex gap-2 mt-2">
+            <button
+              onClick={onUpdate}
+              disabled={generating || !formData.recipientName || !formData.award || !formData.eventName}
+              className="flex-1 py-3 bg-aen-orange text-white text-sm font-semibold rounded-xl hover:bg-aen-orange/90 focus:outline-none focus:ring-2 focus:ring-aen-orange/20 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+            >
+              {generating ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                'Update Certificate'
+              )}
+            </button>
+            <button
+              onClick={onCancelEdit}
+              className="px-4 py-3 border border-gray-200 text-gray-600 text-sm font-medium rounded-xl hover:bg-gray-50 transition-all"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={onGenerate}
+            disabled={generating || !formData.recipientName || !formData.award || !formData.eventName}
+            className="w-full py-3 bg-navy-900 text-white text-sm font-semibold rounded-xl hover:bg-navy-800 focus:outline-none focus:ring-2 focus:ring-navy-900/20 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 mt-2"
+          >
+            {generating ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Generating Certificate...
+              </>
+            ) : (
+              'Generate Certificate'
+            )}
+          </button>
+        )}
       </div>
     </div>
   );

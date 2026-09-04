@@ -1,5 +1,5 @@
 import { Certificate } from '../../pages/DashboardPage';
-import { Search, Download, Eye, Ban, RefreshCw } from 'lucide-react';
+import { Search, Download, Ban, RefreshCw, Trash2, Pencil, Image } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface Props {
@@ -7,8 +7,11 @@ interface Props {
   search: string;
   setSearch: (v: string) => void;
   onRevoke: (id: string) => void;
+  onDelete: (id: string) => void;
+  onEdit: (cert: Certificate) => void;
   onRefresh: () => void;
   onDownloadPdf?: (id: string, recipientName: string) => void;
+  onDownloadImage?: (id: string, recipientName: string) => void;
 }
 
 function formatDateShort(dateStr: string) {
@@ -26,7 +29,7 @@ const statusColors: Record<string, string> = {
   revoked: 'bg-red-50 text-red-700 border-red-200',
 };
 
-export default function CertificateHistory({ certificates, search, setSearch, onRevoke, onRefresh, onDownloadPdf }: Props) {
+export default function CertificateHistory({ certificates, search, setSearch, onRevoke, onDelete, onEdit, onRefresh, onDownloadPdf, onDownloadImage }: Props) {
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
       <div className="flex items-center justify-between mb-4">
@@ -97,11 +100,25 @@ export default function CertificateHistory({ certificates, search, setSearch, on
                       {cert.status !== 'revoked' && (
                         <>
                           <button
+                            onClick={() => onEdit(cert)}
+                            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-all"
+                            title="Edit"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          <button
                             onClick={() => onDownloadPdf && onDownloadPdf(cert._id, cert.recipientName)}
                             className="p-1.5 text-gray-400 hover:text-navy-900 hover:bg-gray-100 rounded-md transition-all"
                             title="Download PDF"
                           >
                             <Download size={14} />
+                          </button>
+                          <button
+                            onClick={() => onDownloadImage && onDownloadImage(cert._id, cert.recipientName)}
+                            className="p-1.5 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-md transition-all"
+                            title="Download as Image"
+                          >
+                            <Image size={14} />
                           </button>
                           <button
                             onClick={() => onRevoke(cert._id)}
@@ -112,6 +129,13 @@ export default function CertificateHistory({ certificates, search, setSearch, on
                           </button>
                         </>
                       )}
+                      <button
+                        onClick={() => onDelete(cert._id)}
+                        className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-all"
+                        title="Delete"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   </td>
                 </motion.tr>

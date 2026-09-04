@@ -4,7 +4,7 @@ import Signatory from '../models/Signatory';
 import { authenticate } from '../middleware/auth';
 import { AuthRequest } from '../types';
 import { generateCertificateId, generateQrData } from '../utils/certificate';
-import { generatePdf } from '../utils/pdfGenerator';
+import { generatePdf, generateImage } from '../utils/pdfGenerator';
 
 const router = Router();
 
@@ -206,11 +206,44 @@ router.get('/:id/pdf', async (req: AuthRequest, res) => {
 
     const safeName = cert.recipientName.replace(/[^a-zA-Z0-9]/g, '_');
     res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Length', pdfBuffer.length);
     res.setHeader('Content-Disposition', `attachment; filename="Certificate_${safeName}.pdf"`);
-    res.send(pdfBuffer);
+    res.end(pdfBuffer);
   } catch (error: any) {
     console.error('PDF generation error:', error);
     res.status(500).json({ error: 'Failed to generate PDF.' });
+  }
+});
+
+// GET /api/certificates/:id/image
+router.get('/:id/image', async (req: AuthRequest, res) => {
+  try {
+    const cert = await Certificate.findById(req.params.id)
+      .populate('signatoryIds', 'name title signatureUrl');
+
+    if (!cert) return res.status(404).json({ error: 'Certificate not found.' });
+
+    const imageBuffer = await generateImage({
+      certificateId: cert.certificateId,
+      recipientName: cert.recipientName,
+      certificateType: cert.certificateType,
+      award: cert.award,
+      eventName: cert.eventName,
+      description: cert.description,
+      eventDate: cert.eventDate,
+      issueDate: cert.issueDate,
+      logoUrl: '',
+      signatories: (cert.signatoryIds as any[]) || [],
+    });
+
+    const safeName = cert.recipientName.replace(/[^a-zA-Z0-9]/g, '_');
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Content-Length', imageBuffer.length);
+    res.setHeader('Content-Disposition', `attachment; filename="Certificate_${safeName}.png"`);
+    res.end(imageBuffer);
+  } catch (error: any) {
+    console.error('Image generation error:', error);
+    res.status(500).json({ error: 'Failed to generate image.' });
   }
 });
 

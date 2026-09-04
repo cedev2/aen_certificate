@@ -332,6 +332,7 @@ export async function generatePdf(data: CertificateData): Promise<Buffer> {
 
   const browser = await puppeteer.launch({
     headless: true,
+    executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
   });
 
@@ -347,6 +348,31 @@ export async function generatePdf(data: CertificateData): Promise<Buffer> {
     });
 
     return Buffer.from(pdfBuffer);
+  } finally {
+    await browser.close();
+  }
+}
+
+export async function generateImage(data: CertificateData): Promise<Buffer> {
+  const html = buildCertificateHtml(data);
+
+  const browser = await puppeteer.launch({
+    headless: true,
+    executablePath: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+  });
+
+  try {
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1122, height: 793, deviceScaleFactor: 2 });
+    await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+    const screenshotBuffer = await page.screenshot({
+      type: 'png',
+      clip: { x: 0, y: 0, width: 1122, height: 793 },
+    });
+
+    return Buffer.from(screenshotBuffer);
   } finally {
     await browser.close();
   }

@@ -29,6 +29,13 @@ export interface Certificate {
   createdAt: string;
 }
 
+export interface Signatory {
+  _id: string;
+  name: string;
+  title: string;
+  signatureUrl: string;
+}
+
 export interface FormData {
   recipientName: string;
   certificateType: string;
@@ -61,6 +68,7 @@ export default function DashboardPage() {
   const [successModal, setSuccessModal] = useState<{ certId: string; recipient: string; award: string } | null>(null);
   const [generating, setGenerating] = useState(false);
   const [search, setSearch] = useState('');
+  const [editingCert, setEditingCert] = useState<Certificate | null>(null);
 
   const loadLogo = useCallback(async () => {
     try {
@@ -121,6 +129,15 @@ export default function DashboardPage() {
     } catch {}
   };
 
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to permanently delete this certificate? This cannot be undone.')) return;
+    try {
+      await certificateAPI.delete(id);
+      loadCertificates();
+      loadStats();
+    } catch {}
+  };
+
   const handleGenerateAnother = () => {
     setFormData({
       ...defaultFormData,
@@ -136,6 +153,48 @@ export default function DashboardPage() {
     } catch (err) {
       alert('Failed to download PDF.');
     }
+  };
+
+  const handleDownloadImage = async (certId: string, recipientName?: string) => {
+    try {
+      await certificateAPI.downloadImage(certId, recipientName);
+    } catch (err) {
+      alert('Failed to download image.');
+    }
+  };
+
+  const handleEdit = (cert: Certificate) => {
+    setEditingCert(cert);
+    setFormData({
+      recipientName: cert.recipientName,
+      certificateType: cert.certificateType,
+      award: cert.award,
+      eventName: cert.eventName,
+      description: cert.description,
+      eventDate: cert.eventDate?.split('T')[0] || '',
+      issueDate: cert.issueDate?.split('T')[0] || '',
+    });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleUpdate = async () => {
+    if (!editingCert) return;
+    setGenerating(true);
+    try {
+      await certificateAPI.update(editingCert._id, formData);
+      setEditingCert(null);
+      setFormData({ ...defaultFormData });
+      loadCertificates();
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to update certificate.');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCert(null);
+    setFormData({ ...defaultFormData });
   };
 
 
@@ -190,7 +249,10 @@ export default function DashboardPage() {
               formData={formData}
               setFormData={setFormData}
               onGenerate={handleGenerate}
+              onUpdate={handleUpdate}
               generating={generating}
+              editingCert={editingCert}
+              onCancelEdit={handleCancelEdit}
             />
             <CertificatePreview
               formData={formData}
@@ -204,8 +266,11 @@ export default function DashboardPage() {
             search={search}
             setSearch={setSearch}
             onRevoke={handleRevoke}
+            onDelete={handleDelete}
+            onEdit={handleEdit}
             onRefresh={loadCertificates}
             onDownloadPdf={handleDownloadPdf}
+            onDownloadImage={handleDownloadImage}
           />
         </motion.div>
       </main>

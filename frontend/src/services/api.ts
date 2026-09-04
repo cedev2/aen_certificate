@@ -45,17 +45,14 @@ export const certificateAPI = {
   create: (data: any) => api.post('/certificates', data),
   update: (id: string, data: any) => api.put(`/certificates/${id}`, data),
   revoke: (id: string) => api.post(`/certificates/${id}/revoke`),
+  delete: (id: string) => api.delete(`/certificates/${id}`),
   downloadPdf: async (id: string, recipientName?: string) => {
-    const response = await api.get(`/certificates/${id}/pdf`, { responseType: 'blob' });
-    const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
-    const link = document.createElement('a');
-    link.href = url;
-    const safeName = (recipientName || 'AEN').replace(/[^a-zA-Z0-9]/g, '_');
-    link.setAttribute('download', `Certificate_${safeName}.pdf`);
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    window.URL.revokeObjectURL(url);
+    const token = localStorage.getItem('aen_token');
+    window.open(`/api/certificates/${id}/pdf?token=${token}`, '_blank');
+  },
+  downloadImage: async (id: string, recipientName?: string) => {
+    const token = localStorage.getItem('aen_token');
+    window.open(`/api/certificates/${id}/image?token=${token}`, '_blank');
   },
   stats: () => api.get('/certificates/stats'),
 };
